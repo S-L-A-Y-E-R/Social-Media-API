@@ -6,6 +6,7 @@ import {
   PrismaClientValidationError,
 } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 import AppError from "../utils/appError";
 
@@ -62,6 +63,19 @@ const handlePrismaError = (err: PrismaError): AppError => {
   return new AppError("Unknown Prisma Client Error", 500);
 };
 
+const handleZodError = (err: ZodError): AppError => {
+  const messagesObj = err.issues.map((issue) => {
+    return { [issue.path[0]]: issue.message };
+  });
+  const messages = Object.assign({}, ...messagesObj);
+  const messageKeys = Object.keys(messages);
+  const messageValues = Object.values(messages);
+  const message = `Invalid ${
+    messageKeys.length > 1 ? "fields" : "field"
+  }:{ ${messageKeys.join(", ")}} - {${messageValues.join(", ")}}.`;
+  return new AppError(message, 400);
+};
+
 const handleExpiredTokenError = (): AppError =>
   new AppError("Expired token, please login again!", 401);
 
@@ -107,6 +121,8 @@ const globalErrorHandler = (
       const error = handlePrismaError(err as unknown as PrismaError);
       if (err.name === "JsonWebTokenError") throw handleTokenError();
       if (err.name === "TokenExpiredError") throw handleExpiredTokenError();
+      if (err.name === "ZodError")
+        throw handleZodError(err as unknown as ZodError);
       prodError(res, error);
     } catch (error) {
       prodError(res, error as ErrorResponse);
