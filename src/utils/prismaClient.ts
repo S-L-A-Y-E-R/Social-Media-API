@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-export const prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
 prisma.$use(async (params, next) => {
   const before = Date.now();
@@ -17,3 +17,5 @@ prisma.$use(async (params, next) => {
 
   return result;
 });
+
+export { prisma };

@@ -1,1 +1,46 @@
+datasource db {
+    provider  = "postgresql"
+    url       = env("POSTGRES_PRISMA_URL")
+    directUrl = env("POSTGRES_URL_NON_POOLING")
+}
 
+generator client {
+    provider = "prisma-client-js"
+}
+
+model User {
+    id                       Int       @id @default(autoincrement())
+    username                 String    @unique
+    email                    String    @unique
+    password                 String
+    birthDate                DateTime
+    joinDate                 DateTime  @default(now())
+    lastLogin                DateTime  @default(now())
+    passwordResetToken       String?   @unique
+    passwordResetTokenExpiry DateTime?
+    profile                  Profile?
+
+    @@index([username, email])
+}
+
+model Profile {
+    id             Int      @id @default(autoincrement())
+    fullName       String
+    Bio            String?
+    profilePicture Image?
+    followersCount Int      @default(0)
+    followingCount Int      @default(0)
+    postsCount     Int      @default(0)
+    updatedAt      DateTime @updatedAt
+    userId         Int      @unique
+    user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@index([fullName])
+}
+
+model Image {
+    id        Int     @id @default(autoincrement())
+    url       String
+    profileId Int     @unique
+    profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
