@@ -9,7 +9,7 @@ import {
   resetPassword,
   updatePassword,
 } from "../controllers/authController";
-import { protect } from "../middleware/authMiddlewares";
+import { protect } from "../middlewares/authMiddleware";
 import { responseAndTokens } from "../utils/authHelperFunctions";
 
 const router = Router();
