@@ -6,6 +6,7 @@ import {
   followProfile,
   unfollowProfile,
   searchProfiles,
+  subscribeToNotifications,
 } from "../controllers/profileController";
 import { protect } from "../middlewares/authMiddleware";
 import upload from "../middlewares/multer";
@@ -20,5 +21,6 @@ router.patch("/update-profile", upload.single("profilePicture"), updateProfile);
 router.patch("/follow-profile/:id", followProfile);
 router.patch("/unfollow-profile/:id", unfollowProfile);
 router.get("/search-profiles", searchProfiles);
+router.post("/subscribe-to-notifications", subscribeToNotifications);
 
 export default router;

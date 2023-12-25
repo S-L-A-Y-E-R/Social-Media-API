@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from "express";
+import { SubscriptionType } from "@prisma/client";
+import webPush from "../utils/webPush";
 import cloudinaryV2 from "../utils/cloudinary";
 import { prisma } from "../utils/prismaClient";
 import catchAsync from "../utils/catchAsync";
@@ -173,6 +175,33 @@ export const followProfile = catchAsync(
       },
     });
 
+    const followedProfileSubscription = await prisma.subscription.findFirst({
+      where: {
+        profileId: Number(profileToFollow.id),
+        type: SubscriptionType.NEW_FOLLOWER,
+      },
+    });
+
+    const modifiedProfileSubscription = {
+      id: followedProfileSubscription?.id,
+      endpoint: followedProfileSubscription?.endpoint as string,
+      keys: {
+        auth: followedProfileSubscription?.auth as string,
+        p256dh: followedProfileSubscription?.p256dh as string,
+      },
+      type: followedProfileSubscription?.type,
+      profileId: followedProfileSubscription?.profileId,
+    };
+
+    if (followedProfileSubscription) {
+      const payload = JSON.stringify({
+        title: "New follower",
+        body: `${profile?.fullName} started following you`,
+      });
+
+      await webPush.sendNotification(modifiedProfileSubscription, payload);
+    }
+
     res.status(200).json({
       status: "success",
       message: "You followed this profile",
@@ -263,6 +292,38 @@ export const searchProfiles = catchAsync(
       results: profiles.length,
       data: {
         profiles,
+      },
+    });
+  }
+);
+
+export const subscribeToNotifications = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { endpoint, keys, type, profileId } = req.body;
+
+    const newSubscription = await prisma.subscription.upsert({
+      where: {
+        profileId: Number(profileId),
+        type,
+      },
+      update: {
+        endpoint,
+        auth: keys.auth,
+        p256dh: keys.p256dh,
+      },
+      create: {
+        endpoint,
+        auth: keys.auth,
+        p256dh: keys.p256dh,
+        type,
+        profileId: Number(profileId),
+      },
+    });
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        subscription: newSubscription,
       },
     });
   }

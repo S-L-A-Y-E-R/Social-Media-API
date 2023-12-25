@@ -26,19 +26,20 @@ model User {
 }
 
 model Profile {
-    id             Int       @id @default(autoincrement())
+    id             Int            @id @default(autoincrement())
     fullName       String
     Bio            String?
     profilePicture Image?
-    followers      Profile[] @relation("FollowRelation")
-    following      Profile[] @relation("FollowRelation")
-    followersCount Int       @default(0)
-    followingCount Int       @default(0)
-    postsCount     Int       @default(0)
-    privacy        Privacy   @default(PUBLIC)
-    updatedAt      DateTime  @updatedAt
-    userId         Int       @unique
-    user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    followers      Profile[]      @relation("FollowRelation")
+    following      Profile[]      @relation("FollowRelation")
+    followersCount Int            @default(0)
+    followingCount Int            @default(0)
+    postsCount     Int            @default(0)
+    privacy        Privacy        @default(PUBLIC)
+    updatedAt      DateTime       @updatedAt
+    userId         Int            @unique
+    user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    subscriptions  Subscription[]
 
     @@index([fullName])
 }
@@ -50,8 +51,23 @@ model Image {
     profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
+model Subscription {
+    id        Int              @id @default(autoincrement())
+    endpoint  String
+    auth      String
+    p256dh    String
+    type      SubscriptionType
+    profileId Int              @unique
+    profile   Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
 enum Privacy {
     PUBLIC
     PRIVATE
     FRIENDS
+}
+
+enum SubscriptionType {
+    NEW_FOLLOWER
+    MESSAGE
 }

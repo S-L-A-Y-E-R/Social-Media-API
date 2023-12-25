@@ -14,9 +14,9 @@ import AppError from "../utils/appError";
 import { signUpSchema, loginSchema } from "../validators/authValidator";
 import Email from "../utils/email";
 
- declare module "express-serve-static-core" {
+declare module "express-serve-static-core" {
   interface Request {
-    user?:any;
+    user?: any;
   }
 }
 
