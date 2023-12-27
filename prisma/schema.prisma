@@ -39,9 +39,68 @@ model Profile {
     updatedAt      DateTime       @updatedAt
     userId         Int            @unique
     user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    sharedPosts    PostProfile[]
+    posts          Post[]
     subscriptions  Subscription[]
+    comments       Comment[]
+    likes          Like[]
 
     @@index([fullName])
+}
+
+model Post {
+    id                 Int           @id @default(autoincrement())
+    content            String
+    privacy            Privacy       @default(FRIENDS)
+    views              Int           @default(0)
+    shares             Int           @default(0)
+    profilesSharedWith PostProfile[]
+    tags               String[]
+    images             Image[]
+    videos             Video[]
+    likes              Like[]
+    comments           Comment[]
+    authorId           Int
+    author             Profile       @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    publishedAt        DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
+}
+
+model PostProfile {
+    postId    Int
+    post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    profileId Int
+    profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@id([postId, profileId])
+}
+
+model Comment {
+    id            Int       @id @default(autoincrement())
+    content       String
+    isEdited      Boolean   @default(false)
+    repliesCount  Int       @default(0)
+    replies       Comment[] @relation("ParentComment")
+    parentComment Comment?  @relation("ParentComment", fields: [parentId], references: [id])
+    parentId      Int?
+    authorId      Int
+    author        Profile   @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    likes         Like[]
+    videos        Video[]
+    postId        Int
+    post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    publishedAt   DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+}
+
+model Like {
+    id        Int     @id @default(autoincrement())
+    authorId  Int
+    author    Profile @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    postId    Int
+    post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    commentId Int
+    comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Image {
@@ -49,6 +108,17 @@ model Image {
     url       String
     profileId Int     @unique
     profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    posttId   Int?
+    post      Post?   @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model Video {
+    id        Int      @id @default(autoincrement())
+    url       String
+    posttId   Int?
+    post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    commentId Int?
+    comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Subscription {
