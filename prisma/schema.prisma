@@ -22,7 +22,8 @@ model User {
     active                   Boolean   @default(true)
     profile                  Profile?
 
-    @@index([username, email])
+    @@index([username])
+    @@index([email])
 }
 
 model Profile {
@@ -51,9 +52,12 @@ model Profile {
 model Post {
     id                 Int           @id @default(autoincrement())
     content            String
+    isEdited           Boolean       @default(false)
     privacy            Privacy       @default(FRIENDS)
     views              Int           @default(0)
     shares             Int           @default(0)
+    likesCount         Int           @default(0)
+    commentsCount      Int           @default(0)
     profilesSharedWith PostProfile[]
     tags               String[]
     images             Image[]
@@ -64,6 +68,10 @@ model Post {
     author             Profile       @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     publishedAt        DateTime      @default(now())
     updatedAt          DateTime      @updatedAt
+
+    @@index([content])
+    @@index([privacy])
+    @@index([authorId])
 }
 
 model PostProfile {
@@ -73,6 +81,8 @@ model PostProfile {
     profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@id([postId, profileId])
+    @@index([postId])
+    @@index([profileId])
 }
 
 model Comment {
@@ -80,6 +90,7 @@ model Comment {
     content       String
     isEdited      Boolean   @default(false)
     repliesCount  Int       @default(0)
+    likesCount    Int       @default(0)
     replies       Comment[] @relation("ParentComment")
     parentComment Comment?  @relation("ParentComment", fields: [parentId], references: [id])
     parentId      Int?
@@ -91,6 +102,10 @@ model Comment {
     post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     publishedAt   DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
+
+    @@index([content])
+    @@index([authorId])
+    @@index([postId])
 }
 
 model Like {
@@ -101,15 +116,23 @@ model Like {
     post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     commentId Int
     comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@index([authorId])
+    @@index([postId])
+    @@index([commentId])
 }
 
 model Image {
-    id        Int     @id @default(autoincrement())
+    id        Int      @id @default(autoincrement())
     url       String
-    profileId Int     @unique
-    profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    profileId Int?     @unique
+    profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     posttId   Int?
-    post      Post?   @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@index([url])
+    @@index([profileId])
+    @@index([posttId])
 }
 
 model Video {
@@ -119,6 +142,10 @@ model Video {
     post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     commentId Int?
     comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@index([url])
+    @@index([posttId])
+    @@index([commentId])
 }
 
 model Subscription {
@@ -129,6 +156,9 @@ model Subscription {
     type      SubscriptionType
     profileId Int              @unique
     profile   Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    @@index([endpoint])
+    @@index([profileId])
 }
 
 enum Privacy {

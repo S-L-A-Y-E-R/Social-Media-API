@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { SubscriptionType } from "@prisma/client";
 import webPush from "../utils/webPush";
-import cloudinaryV2 from "../utils/cloudinary";
 import { prisma } from "../utils/prismaClient";
 import catchAsync from "../utils/catchAsync";
 import AppError from "../utils/appError";
-import { getUser } from "../utils/profileHelperFunctions";
+import { getUser, handlePhotoUpload } from "../utils/profileHelperFunctions";
+import { use } from "passport";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -15,25 +15,26 @@ declare module "express-serve-static-core" {
 
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const user = await getUser(req, res, next);
-
-    const profile = await prisma.profile.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
-        id: Number(user?.profile?.id),
-        user: {
-          active: true,
-        },
+        id: Number(req.user?.id),
       },
       include: {
-        profilePicture: {
-          select: {
-            url: true,
+        profile: {
+          include: {
+            profilePicture: {
+              select: {
+                url: true,
+              },
+            },
+            followers: true,
+            following: true,
           },
         },
-        followers: true,
-        following: true,
       },
     });
+
+    const profile = user?.profile;
 
     res.status(200).json({
       status: "success",
@@ -55,11 +56,7 @@ export const updateProfile = catchAsync(
         new AppError("You can't update followersCount or followingCount", 400)
       );
 
-    let uploadedPhot = undefined;
-    if (req.file) {
-      const result = await cloudinaryV2.uploader.upload(req.file.path);
-      uploadedPhot = result.secure_url;
-    }
+    let uploadedPhot = await handlePhotoUpload(req);
 
     const user = await getUser(req, res, next);
 
@@ -143,37 +140,38 @@ export const followProfile = catchAsync(
       return next(new AppError("You already follow this profile", 400));
     }
 
-    await prisma.profile.update({
-      where: {
-        id: Number(profile?.id),
-      },
-      data: {
-        followingCount: {
-          increment: 1,
+    await prisma.$transaction([
+      prisma.profile.update({
+        where: {
+          id: Number(profile?.id),
         },
-        following: {
-          connect: {
-            id: Number(profileToFollow.id),
+        data: {
+          followingCount: {
+            increment: 1,
+          },
+          following: {
+            connect: {
+              id: Number(profileToFollow.id),
+            },
           },
         },
-      },
-    });
-
-    await prisma.profile.update({
-      where: {
-        id: Number(profileToFollow.id),
-      },
-      data: {
-        followersCount: {
-          increment: 1,
+      }),
+      prisma.profile.update({
+        where: {
+          id: Number(profileToFollow.id),
         },
-        followers: {
-          connect: {
-            id: Number(profile?.id),
+        data: {
+          followersCount: {
+            increment: 1,
+          },
+          followers: {
+            connect: {
+              id: Number(profile?.id),
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     const followedProfileSubscription = await prisma.subscription.findFirst({
       where: {
@@ -234,37 +232,38 @@ export const unfollowProfile = catchAsync(
       return next(new AppError("You don't follow this profile", 400));
     }
 
-    await prisma.profile.update({
-      where: {
-        id: Number(profile?.id),
-      },
-      data: {
-        followingCount: {
-          decrement: 1,
+    await prisma.$transaction([
+      prisma.profile.update({
+        where: {
+          id: Number(profile?.id),
         },
-        following: {
-          disconnect: {
-            id: Number(profileToUnfollow.id),
+        data: {
+          followingCount: {
+            decrement: 1,
+          },
+          following: {
+            disconnect: {
+              id: Number(profileToUnfollow.id),
+            },
           },
         },
-      },
-    });
-
-    await prisma.profile.update({
-      where: {
-        id: Number(profileToUnfollow.id),
-      },
-      data: {
-        followersCount: {
-          decrement: 1,
+      }),
+      prisma.profile.update({
+        where: {
+          id: Number(profileToUnfollow.id),
         },
-        followers: {
-          disconnect: {
-            id: Number(profile?.id),
+        data: {
+          followersCount: {
+            decrement: 1,
+          },
+          followers: {
+            disconnect: {
+              id: Number(profile?.id),
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     res.status(200).json({
       status: "success",
@@ -278,7 +277,7 @@ export const searchProfiles = catchAsync(
     const textSearch = req.query.search as string;
 
     const profiles = await prisma.profile.findMany({
-      take: 10,
+      take: Number(req.query.limit) || 10,
       skip: Number(req.query.skip) || 0,
       where: {
         fullName: {
