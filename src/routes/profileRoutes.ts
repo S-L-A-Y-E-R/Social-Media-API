@@ -7,6 +7,8 @@ import {
   unfollowProfile,
   searchProfiles,
   subscribeToNotifications,
+  blockProfile,
+  unblockProfile,
 } from "../controllers/profileController";
 import { getPostsForProfile, sharePost } from "../controllers/postController";
 import { protect } from "../middlewares/authMiddleware";
@@ -30,5 +32,7 @@ router.get("/search-profiles", searchProfiles);
 router.post("/subscribe-to-notifications", subscribeToNotifications);
 router.get("/:profileId/posts", getPostsForProfile);
 router.post("/:profileId/share-post/:postId", sharePost);
+router.patch("/:id/block", blockProfile);
+router.patch("/:id/unblock", unblockProfile);
 
 export default router;
