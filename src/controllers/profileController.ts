@@ -5,7 +5,6 @@ import { prisma } from "../utils/prismaClient";
 import catchAsync from "../utils/catchAsync";
 import AppError from "../utils/appError";
 import { getUser, handlePhotoUpload } from "../utils/profileHelperFunctions";
-import { use } from "passport";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -324,6 +323,168 @@ export const subscribeToNotifications = catchAsync(
       data: {
         subscription: newSubscription,
       },
+    });
+  }
+);
+
+export const blockProfile = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    const user = await getUser(req, res, next);
+    const profile = await prisma.profile.findUnique({
+      where: {
+        id: Number(user?.profile?.id),
+      },
+      include: {
+        blockList: true,
+        blockedBy: true,
+        following: true,
+      },
+    });
+
+    const profileToBlock = await prisma.profile.findUnique({
+      where: {
+        id: Number(id),
+      },
+      include: {
+        blockedBy: true,
+        followers: true,
+        following: true,
+      },
+    });
+
+    if (!profile) {
+      return next(new AppError("No profile found with that ID", 404));
+    }
+
+    if (profile?.id === Number(id)) {
+      return next(new AppError("You can't block yourself", 400));
+    }
+
+    if (profile?.blockList.some((profile) => profile.id === Number(id))) {
+      return next(new AppError("You already blocked this profile", 400));
+    }
+
+    await prisma.$transaction([
+      prisma.profile.update({
+        where: {
+          id: Number(profile?.id),
+        },
+        data: {
+          blockList: {
+            connect: {
+              id: Number(id),
+            },
+          },
+          following: profile?.following.some(
+            (profile) => profile.id === Number(id)
+          )
+            ? {
+                disconnect: {
+                  id: Number(id),
+                },
+              }
+            : undefined,
+          followingCount: profile?.following.some(
+            (profile) => profile.id === Number(id)
+          )
+            ? {
+                decrement: 1,
+              }
+            : undefined,
+        },
+      }),
+      prisma.profile.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          blockedBy: {
+            connect: {
+              id: Number(profile?.id),
+            },
+          },
+          followers: profileToBlock?.followers.some(
+            (profile) => profile.id === Number(profile?.id)
+          )
+            ? {
+                disconnect: {
+                  id: Number(profile?.id),
+                },
+              }
+            : undefined,
+          followersCount: profileToBlock?.followers.some(
+            (profile) => profile.id === Number(profile?.id)
+          )
+            ? {
+                decrement: 1,
+              }
+            : undefined,
+        },
+      }),
+    ]);
+    res.status(200).json({
+      status: "success",
+      message: "You blocked this profile",
+    });
+  }
+);
+
+export const unblockProfile = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    const user = await getUser(req, res, next);
+    const profile = await prisma.profile.findUnique({
+      where: {
+        id: Number(user?.profile?.id),
+      },
+      include: {
+        blockList: true,
+        blockedBy: true,
+      },
+    });
+
+    if (!profile) {
+      return next(new AppError("No profile found with that ID", 404));
+    }
+
+    if (profile?.id === Number(id)) {
+      return next(new AppError("You can't unblock yourself", 400));
+    }
+
+    if (!profile?.blockList.some((profile) => profile.id === Number(id))) {
+      return next(new AppError("You don't block this profile", 400));
+    }
+
+    await prisma.$transaction([
+      prisma.profile.update({
+        where: {
+          id: Number(profile?.id),
+        },
+        data: {
+          blockList: {
+            disconnect: {
+              id: Number(id),
+            },
+          },
+        },
+      }),
+      prisma.profile.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          blockedBy: {
+            disconnect: {
+              id: Number(profile?.id),
+            },
+          },
+        },
+      }),
+    ]);
+    res.status(200).json({
+      status: "success",
+      message: "You unblocked this profile",
     });
   }
 );

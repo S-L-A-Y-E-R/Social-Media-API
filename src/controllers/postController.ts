@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import webPush from "../utils/webPush";
 import catchAsync from "../utils/catchAsync";
 import AppError from "../utils/appError";
 import {
@@ -11,7 +12,8 @@ import { getUser } from "../utils/profileHelperFunctions";
 
 export const createPost = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { content, authorId } = req.body;
+    const profile = (await getUser(req, res, next))?.profile;
+    const { content, authorId, mentions } = req.body;
     const uploadedPhotos = await handlePhotosUpload(req);
     const uploadedVideos = await handleVideosUpload(req);
 
@@ -49,6 +51,36 @@ export const createPost = catchAsync(
       },
     });
 
+    if (mentions.length > 0) {
+      const mentionedProfilesSubscriptions = await prisma.subscription.findMany(
+        {
+          where: {
+            profileId: {
+              in: mentions,
+            },
+          },
+        }
+      );
+
+      mentionedProfilesSubscriptions.forEach(async (subscription) => {
+        const modifiedProfileSubscription = {
+          id: subscription?.id,
+          endpoint: subscription?.endpoint as string,
+          keys: {
+            auth: subscription?.auth as string,
+            p256dh: subscription?.p256dh as string,
+          },
+          type: subscription?.type,
+          profileId: subscription?.profileId,
+        };
+        const payload = JSON.stringify({
+          title: "New post mention",
+          body: `${profile?.fullName} mentioned you in a post`,
+        });
+        await webPush.sendNotification(modifiedProfileSubscription, payload);
+      });
+    }
+
     res.status(201).json({
       status: "success",
       data: {
@@ -73,7 +105,8 @@ export const getPost = catchAsync(
           include: {
             replies: true,
             likes: true,
-            videos: true,
+            video: true,
+            image: true,
           },
         },
         likes: true,
@@ -95,7 +128,9 @@ export const getPost = catchAsync(
 
 export const deletePost = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    const profile = (await getUser(req, res, next))?.profile;
     const { id } = req.params;
+    const authorId = profile?.id;
 
     const post = await prisma.post.findUnique({
       where: {
@@ -105,6 +140,12 @@ export const deletePost = catchAsync(
 
     if (!post) {
       return next(new AppError("No post found with that ID", 404));
+    }
+
+    if (post.authorId !== Number(authorId)) {
+      return next(
+        new AppError("You are not authorized to delete this post", 403)
+      );
     }
 
     await prisma.post.delete({
@@ -138,7 +179,8 @@ export const getPostsForProfile = catchAsync(
           include: {
             replies: true,
             likes: true,
-            videos: true,
+            video: true,
+            image: true,
           },
         },
         likes: true,
@@ -158,7 +200,7 @@ export const getPostsForProfile = catchAsync(
 export const updatePost = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
-    const { content } = req.body;
+    const { content, authorId } = req.body;
     const uploadedPhotos = await handlePhotosUpload(req);
     const uploadedVideos = await handleVideosUpload(req);
 
@@ -170,6 +212,12 @@ export const updatePost = catchAsync(
 
     if (!post) {
       return next(new AppError("No post found with that ID", 404));
+    }
+
+    if (post.authorId !== Number(authorId)) {
+      return next(
+        new AppError("You are not authorized to update this post", 403)
+      );
     }
 
     if (post.authorId !== req.user.id) {
@@ -221,6 +269,10 @@ export const sharePost = catchAsync(
 
     if (!post) {
       return next(new AppError("No post found with that ID", 404));
+    }
+
+    if (!post.sharesEnabled) {
+      return next(new AppError("This post cannot be shared", 403));
     }
 
     await prisma.$transaction([
@@ -286,7 +338,8 @@ export const getFeed = catchAsync(
           include: {
             replies: true,
             likes: true,
-            videos: true,
+            video: true,
+            image: true,
           },
         },
         likes: true,

@@ -1,7 +1,6 @@
 datasource db {
-    provider  = "postgresql"
-    url       = env("POSTGRES_PRISMA_URL")
-    directUrl = env("POSTGRES_URL_NON_POOLING")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -40,6 +39,8 @@ model Profile {
     updatedAt      DateTime       @updatedAt
     userId         Int            @unique
     user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    blockList      Profile[]      @relation("BlockRelation")
+    blockedBy      Profile[]      @relation("BlockRelation")
     sharedPosts    PostProfile[]
     posts          Post[]
     subscriptions  Subscription[]
@@ -58,6 +59,8 @@ model Post {
     shares             Int           @default(0)
     likesCount         Int           @default(0)
     commentsCount      Int           @default(0)
+    commentsEnabled    Boolean       @default(true)
+    sharesEnabled      Boolean       @default(true)
     profilesSharedWith PostProfile[]
     tags               String[]
     images             Image[]
@@ -97,7 +100,8 @@ model Comment {
     authorId      Int
     author        Profile   @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     likes         Like[]
-    videos        Video[]
+    video         Video?
+    image         Image?
     postId        Int
     post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     publishedAt   DateTime  @default(now())
@@ -129,6 +133,8 @@ model Image {
     profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     posttId   Int?
     post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    commentId Int?     @unique
+    comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([url])
     @@index([profileId])
@@ -140,7 +146,7 @@ model Video {
     url       String
     posttId   Int?
     post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    commentId Int?
+    commentId Int?     @unique
     comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([url])
@@ -170,4 +176,5 @@ enum Privacy {
 enum SubscriptionType {
     NEW_FOLLOWER
     MESSAGE
+    MENTION
 }
