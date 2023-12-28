@@ -11,6 +11,7 @@ import AppError from "./utils/appError";
 import globalErrorHandler from "./controllers/errorController";
 import authRouter from "./routes/authRoutes";
 import profileRouter from "./routes/profileRoutes";
+import postRouter from "./routes/postRoutes";
 
 const app = express();
 
@@ -64,6 +65,7 @@ if (process.env.NODE_ENV === "production") {
 //Global resources
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/profile", profileRouter);
+app.use("/api/v1/post", postRouter);
 
 // Handle requests from wrong urls
 app.all("*", (req, res, next) => {

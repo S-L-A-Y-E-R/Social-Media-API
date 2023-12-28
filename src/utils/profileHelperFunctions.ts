@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "./prismaClient";
+import cloudinaryV2 from "./cloudinary";
 
 export const getUser = async (
   req: Request,
@@ -18,4 +19,15 @@ export const getUser = async (
       },
     },
   });
+};
+
+export const handlePhotoUpload = async (req: Request) => {
+  let uploadedPhot = undefined;
+  if (req.file) {
+    const result = await cloudinaryV2.uploader.upload(req.file.path, {
+      resource_type: "image",
+    });
+    uploadedPhot = result.secure_url;
+  }
+  return uploadedPhot;
 };
