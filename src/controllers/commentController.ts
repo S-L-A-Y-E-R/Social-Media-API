@@ -77,6 +77,30 @@ export const addComment = catchAsync(
       }),
     ]);
 
+    const commentSubscription = await prisma.subscription.findUnique({
+      where: {
+        profileId: post.authorId,
+      },
+    });
+
+    if (commentSubscription) {
+      const modifiedProfileSubscription = {
+        id: commentSubscription?.id,
+        endpoint: commentSubscription?.endpoint as string,
+        keys: {
+          auth: commentSubscription?.auth as string,
+          p256dh: commentSubscription?.p256dh as string,
+        },
+        type: commentSubscription?.type,
+        profileId: commentSubscription?.profileId,
+      };
+      const payload = JSON.stringify({
+        title: "New comment",
+        body: `${profile?.fullName} commented on your post`,
+      });
+      await webPush.sendNotification(modifiedProfileSubscription, payload);
+    }
+
     if (mentions.length > 0) {
       const mentionedProfilesSubscriptions = await prisma.subscription.findMany(
         {
