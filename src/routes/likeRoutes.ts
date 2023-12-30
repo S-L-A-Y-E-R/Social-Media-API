@@ -5,12 +5,13 @@ import {
   unlikeComment,
   unlikePost,
 } from "../controllers/likeContoller";
+import { protect } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-router.post("/like-post", likePost).post("/like-comment", likeComment);
-router
-  .delete("/unlike-post/:id", unlikePost)
-  .delete("/unlike-comment/:id", unlikeComment);
+router.use(protect);
+
+router.post("/post", likePost).post("/comment", likeComment);
+router.delete("/:id/post", unlikePost).delete("/:id/comment", unlikeComment);
 
 export default router;

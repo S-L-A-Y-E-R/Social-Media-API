@@ -1,4 +1,5 @@
 import express from "express";
+import { createServer } from "http";
 import morgan from "morgan";
 import cors from "cors";
 import helmet from "helmet";
@@ -8,14 +9,25 @@ import cookieParser from "cookie-parser";
 import xss from "xss";
 import session from "express-session";
 import AppError from "./utils/appError";
+import configureSocket from "./utils/socket";
 import globalErrorHandler from "./controllers/errorController";
 import authRouter from "./routes/authRoutes";
 import profileRouter from "./routes/profileRoutes";
 import postRouter from "./routes/postRoutes";
 import commentRouter from "./routes/commentRoutes";
 import likeRouter from "./routes/likeRoutes";
+import conversationRouter from "./routes/conversationRoutes";
+import messageRouter from "./routes/messageRoutes";
 
 const app = express();
+
+//Setup socket.io
+const server = createServer(app);
+const io = configureSocket(server);
+app.use((req: any, res, next) => {
+  req.io = io;
+  return next();
+});
 
 //Parse json bodies
 app.use(express.json());
@@ -70,6 +82,8 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/comment", commentRouter);
 app.use("/api/v1/like", likeRouter);
+app.use("/api/v1/conversation", conversationRouter);
+app.use("/api/v1/message", messageRouter);
 
 // Handle requests from wrong urls
 app.all("*", (req, res, next) => {
@@ -79,4 +93,4 @@ app.all("*", (req, res, next) => {
 //Using global error handling middleware
 app.use(globalErrorHandler);
 
-export default app;
+export default server;

@@ -26,26 +26,29 @@ model User {
 }
 
 model Profile {
-    id             Int            @id @default(autoincrement())
-    fullName       String
-    Bio            String?
-    profilePicture Image?
-    followers      Profile[]      @relation("FollowRelation")
-    following      Profile[]      @relation("FollowRelation")
-    followersCount Int            @default(0)
-    followingCount Int            @default(0)
-    postsCount     Int            @default(0)
-    privacy        Privacy        @default(PUBLIC)
-    updatedAt      DateTime       @updatedAt
-    userId         Int            @unique
-    user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    blockList      Profile[]      @relation("BlockRelation")
-    blockedBy      Profile[]      @relation("BlockRelation")
-    sharedPosts    PostProfile[]
-    posts          Post[]
-    subscriptions  Subscription[]
-    comments       Comment[]
-    likes          Like[]
+    id                     Int            @id @default(autoincrement())
+    fullName               String
+    Bio                    String?
+    profilePicture         Image?
+    isOnline               Boolean        @default(false)
+    followers              Profile[]      @relation("FollowRelation")
+    following              Profile[]      @relation("FollowRelation")
+    followersCount         Int            @default(0)
+    followingCount         Int            @default(0)
+    postsCount             Int            @default(0)
+    privacy                Privacy        @default(PUBLIC)
+    updatedAt              DateTime       @updatedAt
+    userId                 Int            @unique
+    user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    blockList              Profile[]      @relation("BlockRelation")
+    blockedBy              Profile[]      @relation("BlockRelation")
+    conversationsInitiated Conversation[] @relation("ConversationProfileOne")
+    conversationsReceived  Conversation[] @relation("ConversationProfileTwo")
+    sharedPosts            PostProfile[]
+    posts                  Post[]
+    subscriptions          Subscription[]
+    comments               Comment[]
+    likes                  Like[]
 
     @@index([fullName])
 }
@@ -126,6 +129,40 @@ model Like {
     @@index([commentId])
 }
 
+model Conversation {
+    id           Int       @id @default(autoincrement())
+    profileOneId Int       @unique
+    profileOne   Profile   @relation("ConversationProfileOne", fields: [profileOneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    profileTwoId Int       @unique
+    profileTwo   Profile   @relation("ConversationProfileTwo", fields: [profileTwoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    messages     Message[]
+    createdAt    DateTime  @default(now())
+    updatedAt    DateTime  @updatedAt
+
+    @@index([profileOneId])
+    @@index([profileTwoId])
+}
+
+model Message {
+    id             Int          @id @default(autoincrement())
+    content        String
+    conversationId Int          @unique
+    isEdited       Boolean      @default(false)
+    isDeleted      Boolean      @default(false)
+    isRead         Boolean      @default(false)
+    isDelivered    Boolean      @default(false)
+    conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    images         Image[]
+    videos         Video[]
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+
+    @@index([conversationId])
+    @@index([isDelivered])
+    @@index([isDeleted])
+    @@index([isRead])
+}
+
 model Image {
     id        Int      @id @default(autoincrement())
     url       String
@@ -135,6 +172,8 @@ model Image {
     post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     commentId Int?     @unique
     comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    messageId Int?     @unique
+    message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([url])
     @@index([profileId])
@@ -148,6 +187,8 @@ model Video {
     post      Post?    @relation(fields: [posttId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     commentId Int?     @unique
     comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    messageId Int?     @unique
+    message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([url])
     @@index([posttId])
