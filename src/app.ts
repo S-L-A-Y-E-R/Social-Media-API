@@ -13,6 +13,7 @@ import authRouter from "./routes/authRoutes";
 import profileRouter from "./routes/profileRoutes";
 import postRouter from "./routes/postRoutes";
 import commentRouter from "./routes/commentRoutes";
+import likeRouter from "./routes/likeRoutes";
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/post", postRouter);
 app.use("/api/v1/comment", commentRouter);
+app.use("/api/v1/like", likeRouter);
 
 // Handle requests from wrong urls
 app.all("*", (req, res, next) => {

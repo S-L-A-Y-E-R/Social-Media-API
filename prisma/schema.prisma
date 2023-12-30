@@ -113,13 +113,13 @@ model Comment {
 }
 
 model Like {
-    id        Int     @id @default(autoincrement())
-    authorId  Int
-    author    Profile @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    postId    Int
-    post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    commentId Int
-    comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    id        Int      @id @default(autoincrement())
+    authorId  Int      @unique
+    author    Profile  @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    postId    Int?     @unique
+    post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    commentId Int?     @unique
+    comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([authorId])
     @@index([postId])
@@ -175,6 +175,8 @@ enum Privacy {
 
 enum SubscriptionType {
     NEW_FOLLOWER
+    NEW_COMMENT
+    NEW_LIKE
     MESSAGE
     MENTION
 }
