@@ -6,9 +6,14 @@ import {
   handleVideosUpload,
 } from "../utils/postHelperFunctions";
 import { messageSchema } from "../validators/messageValidator";
+import { Socket } from "socket.io";
+
+interface IRequest extends Request {
+  io?: Socket;
+}
 
 export const sendMessage = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: IRequest, res: Response, next: NextFunction) => {
     const { content, conversationId } = req.body;
     const uploadedPhotos = await handlePhotosUpload(req);
     const uploadedVideos = await handleVideosUpload(req);
@@ -47,6 +52,9 @@ export const sendMessage = catchAsync(
       },
     });
 
+    const channelKey = `chat:${validatedData.conversationId}:messages`;
+    req.io!.emit(channelKey, message);
+
     res.status(201).json({
       status: "success",
       data: {
@@ -57,7 +65,7 @@ export const sendMessage = catchAsync(
 );
 
 export const updateMessage = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: IRequest, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
     const message = await prisma.message.update({
@@ -69,6 +77,9 @@ export const updateMessage = catchAsync(
       },
     });
 
+    const updateKey = `chat:${message?.conversationId}:messages:update`;
+    req.io!.emit(updateKey, message);
+
     res.status(200).json({
       status: "success",
       data: {
@@ -79,10 +90,10 @@ export const updateMessage = catchAsync(
 );
 
 export const deleteMessage = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: IRequest, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
-    await prisma.message.update({
+    const message = await prisma.message.update({
       where: {
         id: Number(id),
       },
@@ -90,6 +101,9 @@ export const deleteMessage = catchAsync(
         isDeleted: true,
       },
     });
+
+    const updateKey = `chat:${message?.conversationId}:messages:update`;
+    req.io!.emit(updateKey, message);
 
     res.status(204).json({
       status: "success",
