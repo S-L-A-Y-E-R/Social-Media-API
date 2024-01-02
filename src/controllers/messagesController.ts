@@ -1,3 +1,4 @@
+import { Socket } from "socket.io";
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../utils/prismaClient";
 import catchAsync from "../utils/catchAsync";
@@ -6,7 +7,7 @@ import {
   handleVideosUpload,
 } from "../utils/postHelperFunctions";
 import { messageSchema } from "../validators/messageValidator";
-import { Socket } from "socket.io";
+import webPush from "../utils/webPush";
 
 interface IRequest extends Request {
   io?: Socket;
@@ -50,10 +51,47 @@ export const sendMessage = catchAsync(
           },
         },
       },
+      include: {
+        conversation: {
+          select: {
+            profileOneId: true,
+            profileOne: {
+              select: {
+                fullName: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const channelKey = `chat:${validatedData.conversationId}:messages`;
     req.io!.emit(channelKey, message);
+
+    const messageSubscription = await prisma.subscription.findUnique({
+      where: {
+        id: message.conversation.profileOneId,
+        type: "MESSAGE",
+      },
+    });
+
+    if (messageSubscription) {
+      const modifiedSubscription = {
+        id: messageSubscription?.id,
+        endpoint: messageSubscription?.endpoint as string,
+        keys: {
+          auth: messageSubscription?.auth as string,
+          p256dh: messageSubscription?.p256dh as string,
+        },
+        type: messageSubscription?.type,
+        profileId: messageSubscription?.profileId,
+      };
+      const payload = JSON.stringify({
+        title: "New message",
+        body: `${message?.conversation?.profileOne?.fullName} sent you a message`,
+      });
+      await webPush.sendNotification(modifiedSubscription, payload);
+    }
 
     res.status(201).json({
       status: "success",

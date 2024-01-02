@@ -80,6 +80,7 @@ export const addComment = catchAsync(
     const commentSubscription = await prisma.subscription.findUnique({
       where: {
         profileId: post.authorId,
+        type: "NEW_COMMENT",
       },
     });
 

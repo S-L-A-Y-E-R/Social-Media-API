@@ -45,6 +45,7 @@ export const likePost = catchAsync(
     const likeSubscription = await prisma.subscription.findUnique({
       where: {
         id: author?.id,
+        type: "NEW_LIKE",
       },
     });
 
@@ -146,6 +147,7 @@ export const likeComment = catchAsync(async (req, res, next) => {
   const likeSubscription = await prisma.subscription.findUnique({
     where: {
       id: author?.id,
+      type: "NEW_LIKE",
     },
   });
 
