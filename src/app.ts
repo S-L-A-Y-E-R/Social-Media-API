@@ -18,6 +18,7 @@ import commentRouter from "./routes/commentRoutes";
 import likeRouter from "./routes/likeRoutes";
 import conversationRouter from "./routes/conversationRoutes";
 import messageRouter from "./routes/messageRoutes";
+import storyRouter from "./routes/storyRoutes";
 
 const app = express();
 
@@ -84,6 +85,7 @@ app.use("/api/v1/comment", commentRouter);
 app.use("/api/v1/like", likeRouter);
 app.use("/api/v1/conversation", conversationRouter);
 app.use("/api/v1/message", messageRouter);
+app.use("/api/v1/story", storyRouter);
 
 // Handle requests from wrong urls
 app.all("*", (req, res, next) => {
