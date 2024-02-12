@@ -1,14 +1,14 @@
-import { Request, Response, NextFunction } from "express";
-import webPush from "../utils/webPush";
-import catchAsync from "../utils/catchAsync";
-import AppError from "../utils/appError";
+import { Request, Response, NextFunction } from 'express';
+import webPush from '../utils/webPush';
+import catchAsync from '../utils/catchAsync';
+import AppError from '../utils/appError';
 import {
   handlePhotosUpload,
   handleVideosUpload,
-} from "../utils/postHelperFunctions";
-import { postSchema } from "../validators/postValidator";
-import { prisma } from "../utils/prismaClient";
-import { getUser } from "../utils/profileHelperFunctions";
+} from '../utils/postHelperFunctions';
+import { postSchema } from '../validators/postValidator';
+import { prisma } from '../utils/prismaClient';
+import { getUser } from '../utils/profileHelperFunctions';
 
 export const createPost = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -51,7 +51,7 @@ export const createPost = catchAsync(
       },
     });
 
-    if (mentions.length > 0) {
+    if (mentions) {
       const mentionedProfilesSubscriptions = await prisma.subscription.findMany(
         {
           where: {
@@ -74,7 +74,7 @@ export const createPost = catchAsync(
           profileId: subscription?.profileId,
         };
         const payload = JSON.stringify({
-          title: "New post mention",
+          title: 'New post mention',
           body: `${profile?.fullName} mentioned you in a post`,
         });
         await webPush.sendNotification(modifiedProfileSubscription, payload);
@@ -82,7 +82,7 @@ export const createPost = catchAsync(
     }
 
     res.status(201).json({
-      status: "success",
+      status: 'success',
       data: {
         post,
       },
@@ -114,11 +114,11 @@ export const getPost = catchAsync(
     });
 
     if (!post) {
-      return next(new AppError("No post found with that ID", 404));
+      return next(new AppError('No post found with that ID', 404));
     }
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         post,
       },
@@ -139,12 +139,12 @@ export const deletePost = catchAsync(
     });
 
     if (!post) {
-      return next(new AppError("No post found with that ID", 404));
+      return next(new AppError('No post found with that ID', 404));
     }
 
     if (post.authorId !== Number(authorId)) {
       return next(
-        new AppError("You are not authorized to delete this post", 403)
+        new AppError('You are not authorized to delete this post', 403)
       );
     }
 
@@ -155,7 +155,7 @@ export const deletePost = catchAsync(
     });
 
     res.status(204).json({
-      status: "success",
+      status: 'success',
       data: null,
     });
   }
@@ -170,7 +170,7 @@ export const getPostsForProfile = catchAsync(
       skip: Number(req.query.skip) || 0,
       where: {
         authorId: Number(profileId),
-        privacy: req.query.privacy as "PUBLIC" | "PRIVATE" | "FRIENDS",
+        privacy: req.query.privacy as 'PUBLIC' | 'PRIVATE' | 'FRIENDS',
       },
       include: {
         images: true,
@@ -188,7 +188,7 @@ export const getPostsForProfile = catchAsync(
     });
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       results: posts.length,
       data: {
         posts,
@@ -211,18 +211,18 @@ export const updatePost = catchAsync(
     });
 
     if (!post) {
-      return next(new AppError("No post found with that ID", 404));
+      return next(new AppError('No post found with that ID', 404));
     }
 
     if (post.authorId !== Number(authorId)) {
       return next(
-        new AppError("You are not authorized to update this post", 403)
+        new AppError('You are not authorized to update this post', 403)
       );
     }
 
     if (post.authorId !== req.user.id) {
       return next(
-        new AppError("You are not authorized to update this post", 403)
+        new AppError('You are not authorized to update this post', 403)
       );
     }
 
@@ -252,7 +252,7 @@ export const updatePost = catchAsync(
     });
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: post,
     });
   }
@@ -268,11 +268,11 @@ export const sharePost = catchAsync(
     });
 
     if (!post) {
-      return next(new AppError("No post found with that ID", 404));
+      return next(new AppError('No post found with that ID', 404));
     }
 
     if (!post.sharesEnabled) {
-      return next(new AppError("This post cannot be shared", 403));
+      return next(new AppError('This post cannot be shared', 403));
     }
 
     await prisma.$transaction([
@@ -295,7 +295,7 @@ export const sharePost = catchAsync(
     ]);
 
     res.status(201).json({
-      status: "success",
+      status: 'success',
       data: {
         post,
       },
@@ -328,7 +328,7 @@ export const getFeed = catchAsync(
           in: profile?.following.map((profile) => profile.id) || [],
         },
         privacy: {
-          in: ["PUBLIC", "FRIENDS"],
+          in: ['PUBLIC', 'FRIENDS'],
         },
       },
       include: {
@@ -345,12 +345,12 @@ export const getFeed = catchAsync(
         likes: true,
       },
       orderBy: {
-        publishedAt: "desc",
+        publishedAt: 'desc',
       },
     });
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       results: posts.length,
       data: {
         posts,
